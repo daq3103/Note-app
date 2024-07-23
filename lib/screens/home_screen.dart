@@ -1,7 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/riverpod/custom_animation.dart';
 import 'package:flutter_application_1/riverpod/notes_riverpod.dart';
 import 'package:flutter_application_1/riverpod/theme_manager.dart';
+import 'package:flutter_application_1/screens/update_note_screen.dart';
+import 'package:flutter_application_1/widgets/widget_home_screen.dart/add_container.dart';
+import 'package:flutter_application_1/widgets/widget_home_screen.dart/appbar.dart';
+import 'package:flutter_application_1/widgets/widget_home_screen.dart/delete_note.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
@@ -9,51 +14,14 @@ class HomePage extends ConsumerWidget {
   const HomePage({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final notes = ref.watch(noteListNotifierProvider);
-    final theme =
-        ref.watch(themeNotifierProvider); // Đọc theme từ ThemeNotifier
+    final getnotes = ref.watch(noteListNotifierProvider);
+    final setnotes = ref.read(noteListNotifierProvider.notifier);
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 70,
-        title: Padding(
-          padding: const EdgeInsets.fromLTRB(21, 0, 0, 0),
-          child: Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-// text appbar
-                  Text(
-                    "Note.d",
-                    style: theme.textTheme.titleLarge!.copyWith(fontSize: 32),
-                  ),
-                  Text(
-                    "Enjoy note taking with friends",
-                    style: theme.textTheme.titleSmall!.copyWith(fontSize: 18),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              const Row(
-                children: [
-// avatar
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: AssetImage("assets/images/avt.png"),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      appBar: const AppBarHomeSreen(),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(21, 24, 21, 0),
         child: MasonryGridView.builder(
-          // itemCount + 1 để thêm 1 item mới
-          // Ví dụ: itemCount = 3 thì sẽ có 4 item
-          // 3 item từ notes và 1 item mới
-          itemCount: notes.length + 1,
+          itemCount: getnotes.length + 1,
           gridDelegate: const SliverSimpleGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
           ),
@@ -61,66 +29,77 @@ class HomePage extends ConsumerWidget {
           crossAxisSpacing: 16,
           itemBuilder: (context, index) {
             if (index == 0) {
-              return Container(
-                height: 171,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(8),
-                  ),
-                  border: Border.all(
-                    color: const Color(0xffB9E6FE),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/contentScreen');
-                      },
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                    const Text("New Note"),
-                  ],
-                ),
-              );
+// shows add_button
+              return const ContainerAddNote();
             }
-            final note = notes[index - 1];
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(8),
-                ),
-                border: Border.all(
-                  color: const Color(0xffE4E7EC),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    note.title,
-                    style: theme.textTheme.bodyMedium!.copyWith(fontSize: 20),
-                  ),
-                  Text(
-                    note.content,
-                  ),
-                  // hiển thị text new line
-                  if (note.additionalContents != null) 
-                  Text(note.additionalContents.toString()),
-                  if (note.image != null)
-                    Image.file(
-                      File(note.image!),
-                      width: 50,
-                      height: 100,
+           final note = getnotes[index - 1];
+    
+// shows note
+            return GestureDetector(
+              onLongPress: () {
+// shows remove note
+                showDialog<String>(
+                    context: context,
+                    builder: (BuildContext context) =>
+                        ConfirmDeleteDialog(onConfirm: () {
+                          setnotes.remove(note);
+                        }));
+              },
+// select note display
+              child: InkWell(
+                onTap: () {
+                  final selectNote = setnotes.selectNote(note);
+                  // use custom animation
+                  ref.read(customAnimationProvider.notifier).navigateWithCustomAnimation(
+                    context,
+                    DisPlayContentScreen(note: selectNote),
+                  );
+                  ref.read(noteListNotifierProvider.notifier).getLstNote();
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(8),
                     ),
-                  if (note.link != null) 
-                  Text(note.link.toString()),
-                  Text(
-                    note.time,
+                    border: Border.all(
+                      color: const Color(0xffE4E7EC),
+                      width: 1,
+                    ),
                   ),
-                ],
+                  child: Column(
+                    children: [
+// Display Note Title
+                      Text(
+                        note.title,
+                        style: ref
+                            .watch(themeNotifierProvider)
+                            .textTheme
+                            .bodyMedium!
+                            .copyWith(fontSize: 20),
+                      ),
+
+// Display Note Content
+                      Text(
+                        note.content,
+                      ),
+// Display Text New Line
+                      note.additionalContents != null ?
+                        Text(note.additionalContents.toString()) : Container(),
+// Display Image if have
+                      if (note.image != null)
+                        Image.file(
+                          File(note.image!),
+                          width: 50,
+                          height: 100,
+                        ),
+// Display textLink if have
+                      if (note.link != null) Text(note.link.toString()),
+                      Text(
+                        note.time,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             );
           },

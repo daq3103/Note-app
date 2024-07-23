@@ -4,27 +4,26 @@ import 'package:flutter_application_1/models/note.dart';
 import 'package:flutter_application_1/riverpod/note_riverpod.dart';
 import 'package:flutter_application_1/riverpod/notes_riverpod.dart';
 import 'package:flutter_application_1/riverpod/theme_manager.dart';
-import 'package:flutter_application_1/widgets/add_icon.dart';
-import 'package:flutter_application_1/widgets/bottom_navigation.dart';
+import 'package:flutter_application_1/widgets/widget_content_note.dart/NewLine_TextFormField.dart';
+import 'package:flutter_application_1/widgets/widget_content_note.dart/add_icon.dart';
+import 'package:flutter_application_1/widgets/widget_content_note.dart/appbar_content.dart';
+import 'package:flutter_application_1/widgets/widget_content_note.dart/bottom_navigation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 class ContentScreen extends HookConsumerWidget {
   ContentScreen({super.key});
   final _formKey = GlobalKey<FormState>();
-
   final FocusNode _titleFocusNode = FocusNode();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final getTheme = ref.watch(themeNotifierProvider);
-    final setTheme = ref.read(themeNotifierProvider.notifier);
     final titleController = useTextEditingController();
     final contentController = useTextEditingController();
     final getNote = ref.watch(noteNotifierProvider);
-    final isFont = useState<bool>(true);
     final listNewLineText = useState<List<TextEditingController>>([]);
 // add new line
-      void addNewLine() {
+    void addNewLine() {
       listNewLineText.value = [
         ...listNewLineText.value,
         TextEditingController()
@@ -32,54 +31,14 @@ class ContentScreen extends HookConsumerWidget {
     }
 
     useEffect(() {
-      _titleFocusNode.requestFocus();
-      return () {
-        titleController.dispose();
-        contentController.dispose();
-        _titleFocusNode.dispose();
-      };
+      // neu co anh thi xoa anh khi khởi tạo màn hình
+      if (getNote?.image != null) {
+        getNote?.image = null;
+      }
+      return null;
     }, []);
-
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Text(
-              'Back',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            const Spacer(),
-// select picture
-            IconButton(
-              onPressed: () {
-                ref.read(noteNotifierProvider.notifier).selectImage();
-              },
-              icon: Image.asset(
-                'assets/images/picture_icon.png',
-                color: getTheme.iconTheme.color,
-              ),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: Image.asset(
-                'assets/images/file_icon.png',
-                color: getTheme.iconTheme.color,
-              ),
-            ),
-// select font-family        
-            IconButton(
-              onPressed: () {
-                isFont.value = !isFont.value;
-                setTheme.toggleFont(isFont.value);
-              },
-              icon: Image.asset(
-                'assets/images/font_icon.png',
-                color: getTheme.iconTheme.color,
-              ),
-            ),
-          ],
-        ),
-      ),
+      appBar: const AppBarContent(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(21, 24, 21, 0),
@@ -136,23 +95,11 @@ class ContentScreen extends HookConsumerWidget {
                     children: [
                       ...List.generate(listNewLineText.value.length, (index) {
                         final controller = listNewLineText.value[index];
-                        return Dismissible(
-                          background: Container(
-                            color: Colors.red,
-                          ),
-                          key: ValueKey(listNewLineText.value[index]),
-                          onDismissed: (DismissDirection direction) {
+                        return NewLineTextFormField(
+                          controller: controller,
+                          onDismissed: () {
                             listNewLineText.value.removeAt(index);
                           },
-                          child: TextFormField(
-                            controller: controller,
-                            decoration: InputDecoration(
-                              hintText: 'New ${index + 1}',
-                              border: InputBorder.none,
-                            ),
-                            maxLines: null,
-                            minLines: 1,
-                          ),
                         );
                       }),
                     ],
@@ -167,15 +114,41 @@ class ContentScreen extends HookConsumerWidget {
                       )
                     : Container(),
 // hiển thị link nếu có
+                // hiển thị link nếu có
                 getNote?.link != null
-                    ? InkWell(
-                        onTap: () {
-                          ref
-                              .read(noteNotifierProvider.notifier)
-                              .launchUrlGoogle(getNote.link!);
-                        },
-                        child: Text(getNote!.link!))
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: InkWell(
+                              onTap: () {
+                                ref
+                                    .read(noteNotifierProvider.notifier)
+                                    .launchUrlGoogle(getNote.link!);
+                              },
+                              child: Text(
+                                getNote!.link!,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              ref
+                                  .read(noteNotifierProvider.notifier)
+                                  .deleteLink();
+                            },
+                            icon: const Icon(Icons.delete),
+                            iconSize: 20,
+                          ),
+                        ],
+                      )
                     : Container(),
+
 // Button add
                 Column(
                   children: [
@@ -194,7 +167,7 @@ class ContentScreen extends HookConsumerWidget {
                               .read(noteNotifierProvider.notifier)
                               .showTextInputDialog(context);
                         }),
-// add picture                 
+// add picture
                     AddIcon(
                       addText: 'Add a featured photo',
                       onPressed: (context, notifier) {
@@ -217,7 +190,7 @@ class ContentScreen extends HookConsumerWidget {
           ),
         ),
       ),
-// add note , theme
+// Display Theme Icon, Save Icon
       bottomNavigationBar: BottomNavigation(
         onSave: () {
           if (_formKey.currentState!.validate()) {
@@ -235,13 +208,8 @@ class ContentScreen extends HookConsumerWidget {
                       additionalContents: additionalContents),
                 );
             Navigator.pop(
-                context,
-                // Note(
-                //   title: title,
-                //   content: content,
-                // )
-                );
-            print('Note added');
+              context,
+            );
           }
         },
       ),

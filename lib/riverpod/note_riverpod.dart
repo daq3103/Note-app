@@ -24,11 +24,11 @@ class NoteNotifier extends StateNotifier<Note?> {
           image: image.path,
         );
       }
-      print(image.path);
       return file;
     }
     return null;
   }
+
 // Function to launch Google search URL
   Future<void> launchUrlGoogle(String query) async {
     final Uri url = Uri.parse(query);
@@ -36,6 +36,7 @@ class NoteNotifier extends StateNotifier<Note?> {
       throw Exception('Could not launch $url');
     }
   }
+
 // Function to show input dialog
   Future<void> showTextInputDialog(BuildContext context) async {
     TextEditingController textEditingController = TextEditingController();
@@ -57,15 +58,14 @@ class NoteNotifier extends StateNotifier<Note?> {
                     if (state != null) {
                       state =
                           state?.updateNote(link: textEditingController.text);
+                    } else {
+                      state = Note(
+                        title: 'New Note',
+                        content: 'New Content',
+                        link: textEditingController.text,
+                      );
                     }
-                    else {
-                    state = Note(
-                      title: 'New Note',
-                      content: 'New Content',
-                      link: textEditingController.text,
-                    );
                   }
-                  } 
                   Navigator.of(context).pop();
                 },
                 child: const Text('Submit'),
@@ -79,6 +79,13 @@ class NoteNotifier extends StateNotifier<Note?> {
             ],
           );
         });
+  }
+// function delete link
+  deleteLink() {
+    if (state != null) {
+       state = state!.link = null;
+    }
+   
   }
 }
 
